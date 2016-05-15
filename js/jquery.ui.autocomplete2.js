@@ -286,7 +286,21 @@ $.widget( "ui.autocomplete", $.ui.autocomplete, {
 		this.searchEvent = event;	// save to repost later if we get a late response
 		return this._search( value );
 	},
-	__response: function( content ) {
+    _response: function() {
+        var index = ++this.requestIndex;
+
+        return $.proxy(function( content ) {
+            this.pending--;
+            if ( index === this.requestIndex ) {
+                this.__response( content );
+            }
+            if ( !this.pending ) {
+                this.element.removeClass( "ui-autocomplete-loading" );
+            }
+        }, this );
+    },
+
+    __response: function( content ) {
 		if ( content ) {
 			content = this._normalize( content );
 		}
@@ -301,6 +315,11 @@ $.widget( "ui.autocomplete", $.ui.autocomplete, {
 			// use ._close() instead of .close() so we don't cancel future searches
 			this._close();
 		}
+
+        if (!this.element.is(':focus')) {
+            // The response has arrived after we have lost focus, so trigger change one last time
+            this._change();
+        }
 	},
 	close: function( event ) {
 		//this.cancelSearch = true;
@@ -447,7 +466,10 @@ $.extend( $.ui.autocomplete, {
 		return $.grep( array, function(value) {
 			return matcher.test( instance.options.renderHtml ? (value.value || value) : (value.label || value.value || value) );
 		});
-	}
+	},
+    regEx: function ( term ) {
+        return $.ui.autocomplete.escapeRegex(term);
+    }
 });
 
 
